@@ -34,6 +34,7 @@ Para uma experiência moderna e limpa, implementamos:
 ## 🚀 Tecnologias Utilizadas
 - Jetpack Compose (UI)
 - Room Database (Persistência Local)
+- Retrofit 2 & Gson (Comunicação Remota)
 - Coroutines & Flow (Concorrência)
 - Navigation Compose (Fluxo de Telas)
 - AlarmManager / WorkManager (Lembretes locais)
