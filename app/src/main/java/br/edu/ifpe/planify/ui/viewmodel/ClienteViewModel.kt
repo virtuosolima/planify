@@ -26,6 +26,17 @@ class ClienteViewModel(private val repository: ClienteRepository) : ViewModel() 
     }
 
     suspend fun getClienteById(id: Int): Cliente? = repository.getClienteById(id)
+
+    // Integração com Retrofit
+    fun fetchClientesRemotos(onResult: (Result<List<Cliente>>) -> Unit = {}) = viewModelScope.launch {
+        val result = repository.fetchClientesRemotos()
+        onResult(result)
+    }
+
+    fun enviarClienteRemoto(cliente: Cliente, onResult: (Result<Cliente?>) -> Unit = {}) = viewModelScope.launch {
+        val result = repository.syncClienteRemoto(cliente)
+        onResult(result)
+    }
 }
 
 class ClienteViewModelFactory(private val repository: ClienteRepository) : ViewModelProvider.Factory {
