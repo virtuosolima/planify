@@ -25,6 +25,8 @@ import br.edu.ifpe.planify.ui.theme.TextSecondary
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.*
+import androidx.compose.ui.res.stringResource
+import br.edu.ifpe.planify.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,7 +185,7 @@ fun AppointmentsList(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Nenhum compromisso registrado para este dia.",
+                text = stringResource(R.string.estado_vazio_mensagem),
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -191,7 +193,7 @@ fun AppointmentsList(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = onNavigateToNovoCompromisso) {
-                Text("Cadastrar primeiro compromisso")
+                Text(stringResource(R.string.estado_vazio_botao))
             }
         }
     } else {
