@@ -8,33 +8,33 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
+import br.edu.ifpe.planify.R
+import br.edu.ifpe.planify.model.Cliente
+import br.edu.ifpe.planify.model.Compromisso
 import br.edu.ifpe.planify.ui.components.SummaryCard
+import br.edu.ifpe.planify.ui.state.UiState
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import br.edu.ifpe.planify.model.Compromisso
 import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.viewmodel.CompromissoViewModel
 import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +53,137 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var hasLoadedOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(allCompromissos, allClientes, compromissos) {
+        if (!hasLoadedOnce) {
+            hasLoadedOnce = true
+        }
+    }
+
+    val homeUiState: UiState = when {
+        !hasLoadedOnce -> UiState.Carregando
+        allCompromissos.isEmpty() && allClientes.isEmpty() && compromissos.isEmpty() -> UiState.Vazio
+        else -> UiState.Sucesso(
+            HomeScreenData(
+                totalCompromissos = allCompromissos.size,
+                totalClientes = allClientes.size,
+                valorTotal = allCompromissos.sumOf { it.valor },
+                compromissos = compromissos,
+                selectedDate = selectedDate
+            )
+        )
+    }
+
+    when (homeUiState) {
+        UiState.Carregando -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = PrimaryBlue)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.home_loading),
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+        UiState.Vazio -> {
+            HomeScreenContent(
+                compromissos = compromissos,
+                allCompromissos = allCompromissos,
+                allClientes = allClientes,
+                selectedDate = selectedDate,
+                snackbarHostState = snackbarHostState,
+                onNavigateToNovoCompromisso = onNavigateToNovoCompromisso,
+                onNavigateToClientes = onNavigateToClientes,
+                onNavigateToServicos = onNavigateToServicos,
+                onDeleteCompromisso = { compromisso ->
+                    scope.launch {
+                        compromissoViewModel.delete(compromisso)
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Compromisso removido",
+                            actionLabel = "Desfazer",
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            compromissoViewModel.insert(compromisso)
+                        }
+                    }
+                },
+                onDateSelected = { compromissoViewModel.selectDate(it) }
+            )
+        }
+        is UiState.Erro -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = homeUiState.mensagem,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        is UiState.Sucesso<*> -> {
+            HomeScreenContent(
+                compromissos = compromissos,
+                allCompromissos = allCompromissos,
+                allClientes = allClientes,
+                selectedDate = selectedDate,
+                snackbarHostState = snackbarHostState,
+                onNavigateToNovoCompromisso = onNavigateToNovoCompromisso,
+                onNavigateToClientes = onNavigateToClientes,
+                onNavigateToServicos = onNavigateToServicos,
+                onDeleteCompromisso = { compromisso ->
+                    scope.launch {
+                        compromissoViewModel.delete(compromisso)
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Compromisso removido",
+                            actionLabel = "Desfazer",
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            compromissoViewModel.insert(compromisso)
+                        }
+                    }
+                },
+                onDateSelected = { compromissoViewModel.selectDate(it) }
+            )
+        }
+    }
+}
+
+private data class HomeScreenData(
+    val totalCompromissos: Int,
+    val totalClientes: Int,
+    val valorTotal: Double,
+    val compromissos: List<Compromisso>,
+    val selectedDate: LocalDate
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeScreenContent(
+    compromissos: List<Compromisso>,
+    allCompromissos: List<Compromisso>,
+    allClientes: List<Cliente>,
+    selectedDate: LocalDate,
+    snackbarHostState: SnackbarHostState,
+    onNavigateToNovoCompromisso: () -> Unit,
+    onNavigateToClientes: () -> Unit,
+    onNavigateToServicos: () -> Unit,
+    onDeleteCompromisso: (Compromisso) -> Unit,
+    onDateSelected: (LocalDate) -> Unit
+) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -101,7 +232,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FA))
         ) {
-            // Summary Section
             SummarySection(
                 totalCompromissos = allCompromissos.size,
                 totalClientes = allClientes.size,
@@ -110,15 +240,13 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Date Picker Section
             DatePickerSection(
                 selectedDate = selectedDate,
-                onDateSelected = { compromissoViewModel.selectDate(it) }
+                onDateSelected = onDateSelected
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Appointments List
             Text(
                 text = "Compromissos do dia",
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -130,19 +258,7 @@ fun HomeScreen(
 
             AppointmentsList(
                 compromissos = compromissos,
-                onDelete = { compromisso ->
-                    scope.launch {
-                        compromissoViewModel.delete(compromisso)
-                        val result = snackbarHostState.showSnackbar(
-                            message = "Compromisso removido",
-                            actionLabel = "Desfazer",
-                            duration = SnackbarDuration.Short
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            compromissoViewModel.insert(compromisso)
-                        }
-                    }
-                }
+                onDelete = onDeleteCompromisso
             )
         }
     }
@@ -178,7 +294,7 @@ fun DatePickerSection(
     onDateSelected: (LocalDate) -> Unit
 ) {
     val days = (-2..12).map { LocalDate.now().plusDays(it.toLong()) }
-    
+
     LazyRow(
         modifier = Modifier.padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)

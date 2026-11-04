@@ -14,18 +14,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
+import br.edu.ifpe.planify.R
 import br.edu.ifpe.planify.model.Cliente
-import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
+import br.edu.ifpe.planify.ui.state.UiState
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
+import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +39,13 @@ fun ClienteListScreen(
     val clientes by viewModel.allClientes.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var hasLoadedOnce by remember { mutableStateOf(false) }
+
+    LaunchedEffect(clientes) {
+        if (!hasLoadedOnce) {
+            hasLoadedOnce = true
+        }
+    }
 
     val filteredClientes = remember(searchQuery, clientes) {
         if (searchQuery.isBlank()) {
@@ -48,111 +55,179 @@ fun ClienteListScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Clientes", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddCliente,
-                containerColor = PrimaryBlue,
-                contentColor = Color.White
+    val uiState: UiState = when {
+        !hasLoadedOnce -> UiState.Carregando
+        filteredClientes.isEmpty() -> UiState.Vazio
+        else -> UiState.Sucesso(filteredClientes)
+    }
+
+    when (uiState) {
+        UiState.Carregando -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Novo Cliente")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = PrimaryBlue)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.loading_data),
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
-        ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text("Buscar cliente...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryBlue,
-                    unfocusedBorderColor = Color.LightGray
-                )
-            )
-
-            // Clients List
-            if (filteredClientes.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        UiState.Vazio -> {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Clientes", color = Color.White, fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
+                    )
+                },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddCliente,
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Novo Cliente")
+                    }
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .background(Color(0xFFF8F9FA)),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text("Nenhum cliente cadastrado", color = TextSecondary)
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            }
+        }
+        is UiState.Erro -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = uiState.mensagem, color = TextSecondary, fontWeight = FontWeight.Medium)
+            }
+        }
+        is UiState.Sucesso<*> -> {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Clientes", color = Color.White, fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
+                    )
+                },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddCliente,
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Novo Cliente")
+                    }
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .background(Color(0xFFF8F9FA))
                 ) {
-                    items(
-                        items = filteredClientes,
-                        key = { it.id }
-                    ) { cliente ->
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    scope.launch {
-                                        viewModel.delete(cliente)
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "Cliente removido",
-                                            actionLabel = "Desfazer",
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.insert(cliente)
-                                        }
-                                    }
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        placeholder = { Text("Buscar cliente...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = Color.LightGray
                         )
+                    )
 
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {
-                                val color = when (dismissState.dismissDirection) {
-                                    SwipeToDismissBoxValue.EndToStart -> Color.Red
-                                    else -> Color.Transparent
+                    // Clients List
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = filteredClientes,
+                            key = { it.id }
+                        ) { cliente ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                                        scope.launch {
+                                            viewModel.delete(cliente)
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "Cliente removido",
+                                                actionLabel = "Desfazer",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.insert(cliente)
+                                            }
+                                        }
+                                        true
+                                    } else {
+                                        false
+                                    }
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color, RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Excluir",
-                                        tint = Color.White
-                                    )
+                            )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    val color = when (dismissState.dismissDirection) {
+                                        SwipeToDismissBoxValue.EndToStart -> Color.Red
+                                        else -> Color.Transparent
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Excluir",
+                                            tint = Color.White
+                                        )
+                                    }
                                 }
+                            ) {
+                                ClienteItem(cliente, onClick = { onNavigateToEditCliente(cliente.id) })
                             }
-                        ) {
-                            ClienteItem(cliente, onClick = { onNavigateToEditCliente(cliente.id) })
                         }
                     }
                 }

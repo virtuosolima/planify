@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.dp
 import br.edu.ifpe.planify.model.Cliente
 import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.components.PlanifyButton
+import br.edu.ifpe.planify.ui.components.PlanifyLoadingState
 import br.edu.ifpe.planify.ui.components.PlanifyTextField
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,18 +28,25 @@ fun ClienteFormScreen(
     var nome by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
     var observacoes by remember { mutableStateOf("") }
-    
-    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+
     val isEditing = clienteId != null
 
     LaunchedEffect(clienteId) {
         if (isEditing) {
+            isLoading = true
             viewModel.getClienteById(clienteId!!)?.let { cliente ->
                 nome = cliente.nome
                 telefone = cliente.telefone
                 observacoes = cliente.observacoes ?: ""
             }
+            isLoading = false
         }
+    }
+
+    if (isEditing && isLoading) {
+        PlanifyLoadingState()
+        return
     }
 
     Scaffold(

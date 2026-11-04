@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import br.edu.ifpe.planify.model.Servico
 import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
 import br.edu.ifpe.planify.ui.components.PlanifyButton
+import br.edu.ifpe.planify.ui.components.PlanifyLoadingState
 import br.edu.ifpe.planify.ui.components.PlanifyTextField
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 
@@ -27,17 +28,25 @@ fun ServicoFormScreen(
     var nome by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var preco by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     val isEditing = servicoId != null
 
     LaunchedEffect(servicoId) {
         if (isEditing) {
+            isLoading = true
             viewModel.getServicoById(servicoId!!)?.let { servico ->
                 nome = servico.nome
                 descricao = servico.descricao
                 preco = servico.preco.toString()
             }
+            isLoading = false
         }
+    }
+
+    if (isEditing && isLoading) {
+        PlanifyLoadingState()
+        return
     }
 
     Scaffold(

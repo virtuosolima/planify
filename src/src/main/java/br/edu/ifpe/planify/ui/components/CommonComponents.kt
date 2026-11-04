@@ -1,5 +1,6 @@
 package br.edu.ifpe.planify.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -7,10 +8,35 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.edu.ifpe.planify.R
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
+
+@Composable
+fun PlanifyLoadingState(
+    message: String = stringResource(R.string.loading_data),
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = PrimaryBlue)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                color = TextSecondary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
 
 @Composable
 fun SummaryCard(

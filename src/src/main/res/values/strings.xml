@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">planify</string>
+    <string name="home_loading">Carregando dados…</string>
+    <string name="loading_data">Carregando dados…</string>
 </resources>

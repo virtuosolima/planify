@@ -9,19 +9,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
+import br.edu.ifpe.planify.R
 import br.edu.ifpe.planify.model.Servico
+import br.edu.ifpe.planify.ui.state.UiState
 import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
@@ -37,95 +37,170 @@ fun ServicoListScreen(
     val servicos by viewModel.allServicos.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var hasLoadedOnce by remember { mutableStateOf(false) }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Serviços", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddServico,
-                containerColor = PrimaryBlue,
-                contentColor = Color.White
+    LaunchedEffect(servicos) {
+        if (!hasLoadedOnce) {
+            hasLoadedOnce = true
+        }
+    }
+
+    val uiState: UiState = when {
+        !hasLoadedOnce -> UiState.Carregando
+        servicos.isEmpty() -> UiState.Vazio
+        else -> UiState.Sucesso(servicos)
+    }
+
+    when (uiState) {
+        UiState.Carregando -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Novo Serviço")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = PrimaryBlue)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.loading_data),
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
-        ) {
-            if (servicos.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        UiState.Vazio -> {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Serviços", color = Color.White, fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
+                    )
+                },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddServico,
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Novo Serviço")
+                    }
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .background(Color(0xFFF8F9FA)),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text("Nenhum serviço cadastrado", color = TextSecondary)
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            }
+        }
+        is UiState.Erro -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = uiState.mensagem, color = TextSecondary, fontWeight = FontWeight.Medium)
+            }
+        }
+        is UiState.Sucesso<*> -> {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Serviços", color = Color.White, fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
+                    )
+                },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddServico,
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Novo Serviço")
+                    }
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .background(Color(0xFFF8F9FA))
                 ) {
-                    items(
-                        items = servicos,
-                        key = { it.id }
-                    ) { servico ->
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    scope.launch {
-                                        viewModel.delete(servico)
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "Serviço removido",
-                                            actionLabel = "Desfazer",
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.insert(servico)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = servicos,
+                            key = { it.id }
+                        ) { servico ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                                        scope.launch {
+                                            viewModel.delete(servico)
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "Serviço removido",
+                                                actionLabel = "Desfazer",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.insert(servico)
+                                            }
                                         }
+                                        true
+                                    } else {
+                                        false
                                     }
-                                    true
-                                } else {
-                                    false
                                 }
-                            }
-                        )
+                            )
 
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {
-                                val color = when (dismissState.dismissDirection) {
-                                    SwipeToDismissBoxValue.EndToStart -> Color.Red
-                                    else -> Color.Transparent
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    val color = when (dismissState.dismissDirection) {
+                                        SwipeToDismissBoxValue.EndToStart -> Color.Red
+                                        else -> Color.Transparent
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Excluir",
+                                            tint = Color.White
+                                        )
+                                    }
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color, RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Excluir",
-                                        tint = Color.White
-                                    )
-                                }
+                            ) {
+                                ServicoItem(servico, onClick = { onNavigateToEditServico(servico.id) })
                             }
-                        ) {
-                            ServicoItem(servico, onClick = { onNavigateToEditServico(servico.id) })
                         }
                     }
                 }
