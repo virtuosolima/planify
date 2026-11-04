@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">planify</string>
+    <string name="estado_vazio_mensagem">Nenhum compromisso registrado para este dia.</string>
+    <string name="estado_vazio_botao">Cadastrar primeiro compromisso</string>
 </resources>
