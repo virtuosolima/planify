@@ -100,7 +100,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            AppointmentsList()
+            AppointmentsList(
+    onNavigateToNovoCompromisso = onNavigateToNovoCompromisso
+)
         }
     }
 }
@@ -163,20 +165,44 @@ fun DatePickerSection() {
 }
 
 @Composable
-fun AppointmentsList() {
+fun AppointmentsList(
+    onNavigateToNovoCompromisso: () -> Unit
+) {
     val mockAppointments = listOf(
         MockAppointment("09:00", "Ana Silva", "Corte de Cabelo", "R$ 50,00"),
         MockAppointment("10:30", "Pedro Santos", "Barba", "R$ 30,00"),
         MockAppointment("14:00", "Maria Oliveira", "Coloração", "R$ 120,00")
     )
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(mockAppointments) { appointment ->
-            AppointmentItem(appointment)
+    if (mockAppointments.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Nenhum compromisso registrado para este dia.",
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(onClick = onNavigateToNovoCompromisso) {
+                Text("Cadastrar primeiro compromisso")
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(mockAppointments) { appointment ->
+                AppointmentItem(appointment)
+            }
         }
     }
 }
