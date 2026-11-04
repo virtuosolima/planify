@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import br.edu.ifpe.planify.model.Compromisso
 import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.viewmodel.CompromissoViewModel
+import br.edu.ifpe.planify.ui.viewmodel.HomeUiState
 import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -46,10 +47,10 @@ fun HomeScreen(
     onNavigateToClientes: () -> Unit,
     onNavigateToServicos: () -> Unit
 ) {
-    val compromissos by compromissoViewModel.compromissosForDate.collectAsState()
     val allCompromissos by compromissoViewModel.allCompromissos.collectAsState()
     val allClientes by clienteViewModel.allClientes.collectAsState()
     val selectedDate by compromissoViewModel.selectedDate.collectAsState()
+    val uiState by compromissoViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -128,22 +129,57 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            AppointmentsList(
-                compromissos = compromissos,
-                onDelete = { compromisso ->
-                    scope.launch {
-                        compromissoViewModel.delete(compromisso)
-                        val result = snackbarHostState.showSnackbar(
-                            message = "Compromisso removido",
-                            actionLabel = "Desfazer",
-                            duration = SnackbarDuration.Short
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            compromissoViewModel.insert(compromisso)
+            when (val state = uiState) {
+                is HomeUiState.Carregando -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryBlue)
+                    }
+                }
+                is HomeUiState.Vazio -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Nenhum compromisso para este dia", color = TextSecondary)
+                    }
+                }
+                is HomeUiState.Sucesso -> {
+                    AppointmentsList(
+                        compromissos = state.compromissos,
+                        onDelete = { compromisso ->
+                            scope.launch {
+                                compromissoViewModel.delete(compromisso)
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Compromisso removido",
+                                    actionLabel = "Desfazer",
+                                    duration = SnackbarDuration.Short
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    compromissoViewModel.insert(compromisso)
+                                }
+                            }
+                        }
+                    )
+                }
+                is HomeUiState.Erro -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = state.mensagem,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Button(
+                                onClick = { compromissoViewModel.recarregar() },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                            ) {
+                                Text("Tentar Novamente", color = Color.White)
+                            }
                         }
                     }
                 }
-            )
+            }
         }
     }
 }

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">planify</string>
+    <string name="estado_carregando">Carregando compromissos…</string>
+    <string name="estado_vazio">Nenhum compromisso para este dia</string>
+    <string name="estado_erro_titulo">Erro ao carregar dados</string>
+    <string name="btn_tentar_novamente">Tentar Novamente</string>
 </resources>
