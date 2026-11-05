@@ -12,20 +12,25 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import br.edu.ifpe.planify.R
 import br.edu.ifpe.planify.ui.components.SummaryCard
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
 import br.edu.ifpe.planify.model.Compromisso
+import br.edu.ifpe.planify.model.PaymentStatus
 import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.viewmodel.CompromissoViewModel
 import br.edu.ifpe.planify.ui.viewmodel.HomeUiState
@@ -124,49 +129,108 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            when (val state = uiState) {
-                is HomeUiState.Carregando -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = PrimaryBlue)
-                    }
-                }
-                is HomeUiState.Vazio -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Nenhum compromisso para este dia", color = TextSecondary)
-                    }
-                }
-                is HomeUiState.Sucesso -> {
-                    AppointmentsList(
-                        compromissos = state.compromissos,
-                        onDelete = { compromisso ->
-                            scope.launch {
-                                compromissoViewModel.delete(compromisso)
-                                val result = snackbarHostState.showSnackbar(
-                                    message = "Compromisso removido",
-                                    actionLabel = "Desfazer",
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    compromissoViewModel.insert(compromisso)
+            Box(modifier = Modifier.weight(1f)) {
+                when (val state = uiState) {
+                    is HomeUiState.Carregando -> HomeLoadingContent()
+                    is HomeUiState.Vazio -> HomeEmptyContent()
+                    is HomeUiState.Sucesso -> {
+                        AppointmentsList(
+                            compromissos = state.compromissos,
+                            onDelete = { compromisso ->
+                                scope.launch {
+                                    compromissoViewModel.delete(compromisso)
+                                    val msgRemovido = "Compromisso removido" // Fallback se R.string.msg_removido falhar
+                                    val btnDesfazer = "Desfazer"
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = msgRemovido,
+                                        actionLabel = btnDesfazer,
+                                        duration = SnackbarDuration.Short
+                                    )
                                 }
                             }
-                        }
+                        )
+                    }
+                    is HomeUiState.Erro -> HomeErrorContent(
+                        mensagem = state.mensagem,
+                        onRetry = { compromissoViewModel.recarregar() }
                     )
                 }
-                is HomeUiState.Erro -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(text = state.mensagem, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                            Button(onClick = { compromissoViewModel.recarregar() }) {
-                                Text("Tentar Novamente")
-                            }
-                        }
-                    }
-                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeLoadingContent() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = PrimaryBlue)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(stringResource(R.string.estado_carregando), color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+fun HomeEmptyContent() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = PrimaryBlue.copy(alpha = 0.2f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.estado_vazio_titulo),
+                style = MaterialTheme.typography.headlineSmall,
+                color = PrimaryBlue,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.estado_vazio_mensagem),
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun HomeErrorContent(mensagem: String, onRetry: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = stringResource(R.string.estado_erro_titulo),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = mensagem,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+            ) {
+                Text(stringResource(R.string.btn_tentar_novamente), color = Color.White)
             }
         }
     }
@@ -203,13 +267,27 @@ fun DatePickerSection(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Un
             val isSelected = date == selectedDate
             Card(
                 onClick = { onDateSelected(date) },
-                colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryBlue else Color.White),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) PrimaryBlue else Color.White
+                ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.width(60.dp)
             ) {
-                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")), color = if (isSelected) Color.White else TextSecondary, fontSize = 12.sp)
-                    Text(text = date.dayOfMonth.toString(), color = if (isSelected) Color.White else PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")),
+                        color = if (isSelected) Color.White else TextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = date.dayOfMonth.toString(),
+                        color = if (isSelected) Color.White else PrimaryBlue,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
                 }
             }
         }
@@ -219,7 +297,11 @@ fun DatePickerSection(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Un
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentsList(compromissos: List<Compromisso>, onDelete: (Compromisso) -> Unit) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         items(items = compromissos, key = { it.id }) { appointment ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
@@ -237,7 +319,10 @@ fun AppointmentsList(compromissos: List<Compromisso>, onDelete: (Compromisso) ->
                         SwipeToDismissBoxValue.EndToStart -> Color.Red
                         else -> Color.Transparent
                     }
-                    Box(modifier = Modifier.fillMaxSize().background(color, RoundedCornerShape(16.dp)).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterEnd) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(color, RoundedCornerShape(16.dp)).padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
                         Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = Color.White)
                     }
                 }
@@ -259,9 +344,19 @@ fun AppointmentItem(appointment: Compromisso) {
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = appointment.horarioInicial.format(timeFormatter), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = PrimaryBlue)
+                Text(
+                    text = appointment.horarioInicial.format(timeFormatter),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = PrimaryBlue
+                )
                 if (appointment.temLembrete) {
-                    Icon(imageVector = Icons.Default.Notifications, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(20.dp))
@@ -269,9 +364,19 @@ fun AppointmentItem(appointment: Compromisso) {
             Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = appointment.descricao, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                Text(text = "Cliente ID: ${appointment.clienteId}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(text = "Valor: R$ %.2f".format(appointment.valor), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
-            Text(text = "R$ %.2f".format(appointment.valor), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PrimaryBlue)
+            Surface(
+                color = if (appointment.statusPagamento == PaymentStatus.PAGO) Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = appointment.statusPagamento.name,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (appointment.statusPagamento == PaymentStatus.PAGO) Color(0xFF2E7D32) else Color(0xFFE65100)
+                )
+            }
         }
     }
 }

@@ -1,12 +1,16 @@
-# Relatório de Sabotagem e Resiliência - Planify
+# 🛡️ Relatório de Sabotagem e Resiliência — Planify
 
-Este documento registra os testes de resiliência e simulação de falhas (sabotagem controlada) para validar o comportamento dos estados de UI (`HomeUiState`) na tela principal (Home).
+Este documento registra os testes de estresse e falhas controladas realizados para garantir que o aplicativo reaja corretamente a situações adversas, utilizando os estados de UI configurados.
 
-## 🧪 Casos de Teste de Resiliência
+## 📊 Tabela de Sabotagens
 
-| ID | Cenário de Sabotagem | Comportamento Esperado | Status |
-|----|----------------------|------------------------|--------|
-| T01 | **Erro de Banco de Dados / DAO** (Simular exceção na query) | O ViewModel deve capturar a exceção e emitir `HomeUiState.Erro`. A `HomeScreen` deve exibir a mensagem de erro e o botão **"Tentar Novamente"**. | [x] Aprovado |
-| T02 | **Base de Dados Vazia** (Sem compromissos no dia selecionado) | O ViewModel deve emitir `HomeUiState.Vazio`. A `HomeScreen` deve exibir a mensagem amigável de estado vazio. | [x] Aprovado |
-| T03 | **Carregamento Lento / Latência** | O ViewModel deve emitir inicialmente `HomeUiState.Carregando` exibindo o indicador de progresso circular (`CircularProgressIndicator`). | [x] Aprovado |
-| T04 | **Recuperação após Erro** (Clicar em "Tentar Novamente") | A função `recarregar()` deve ser acionada, restabelecendo o fluxo de busca de compromissos. | [x] Aprovado |
+| Sabotagem | Local do Código | Comportamento Esperado | Resultado Real | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **Banco Vazio** | `CompromissoDao` | A tela principal deve exibir o estado `Vazio` com a mensagem amigável. | Exibiu ícone de calendário e mensagem de agenda livre. | ✅ |
+| **Erro de SQL** | `CompromissoDao` | Ao forçar um erro na Query (ex: nome de tabela errado), deve exibir a tela de `Erro`. | Exibiu o estado de Erro com botão de tentar novamente. | ✅ |
+| **Delay de Rede/Banco** | `CompromissoRepository` | Ao inserir um `delay(5000)`, a tela deve mostrar o `Carregando`. | O indicador de progresso apareceu corretamente durante a espera. | ✅ |
+| **Dados Corrompidos** | `Compromisso` | Forçar um valor nulo em campo obrigatório. | O app tratou via `try-catch` no ViewModel e mostrou a tela de Erro. | ✅ |
+| **Modo Avião** | Persistência Room | Os dados cadastrados devem continuar aparecendo sem internet. | Funcionamento 100% offline confirmado. | ✅ |
+
+## 🧠 Conclusão Técnica
+O sistema de estados implementado através da `sealed interface HomeUiState` provou ser resiliente. O uso de `catch` no Flow do Room garante que falhas de persistência não causem crash no aplicativo (ANR), revertendo a interface para um estado explicativo ao usuário.

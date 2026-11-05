@@ -1,12 +1,12 @@
 <resources>
     <string name="app_name">planify</string>
-    <string name="estado_vazio_mensagem">Nenhum compromisso registrado para este dia.</string>
-    <string name="estado_vazio_botao">Cadastrar primeiro compromisso</string>
-</resources>
-<resources>
-    <string name="app_name">planify</string>
-    <string name="estado_carregando">Carregando compromissos…</string>
-    <string name="estado_vazio">Nenhum compromisso para este dia</string>
-    <string name="estado_erro_titulo">Erro ao carregar dados</string>
+
+    <!-- Perfil 4: Integrador - Strings de Estado -->
+    <string name="estado_carregando">Sincronizando agenda…</string>
+    <string name="estado_vazio_titulo">Tudo tranquilo por aqui!</string>
+    <string name="estado_vazio_mensagem">Você não tem nenhum compromisso agendado para este dia.</string>
+    <string name="estado_erro_titulo">Ops! Ocorreu um problema</string>
     <string name="btn_tentar_novamente">Tentar Novamente</string>
+    <string name="msg_removido">Compromisso removido</string>
+    <string name="btn_desfazer">Desfazer</string>
 </resources>
