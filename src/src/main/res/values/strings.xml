@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">planify</string>
+    <string name="estado_vazio_mensagem">Nenhum compromisso registrado para este dia.</string>
+    <string name="estado_vazio_botao">Cadastrar primeiro compromisso</string>
+</resources>
+<resources>
+    <string name="app_name">planify</string>
     <string name="estado_carregando">Carregando compromissos…</string>
     <string name="estado_vazio">Nenhum compromisso para este dia</string>
     <string name="estado_erro_titulo">Erro ao carregar dados</string>
