@@ -10,8 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,14 +21,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import br.edu.ifpe.planify.ui.components.SummaryCard
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import br.edu.ifpe.planify.model.Compromisso
 import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.viewmodel.CompromissoViewModel
@@ -102,7 +100,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FA))
         ) {
-            // Summary Section
             SummarySection(
                 totalCompromissos = allCompromissos.size,
                 totalClientes = allClientes.size,
@@ -111,7 +108,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Date Picker Section
             DatePickerSection(
                 selectedDate = selectedDate,
                 onDateSelected = { compromissoViewModel.selectDate(it) }
@@ -119,7 +115,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Appointments List
             Text(
                 text = "Compromissos do dia",
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -165,16 +160,9 @@ fun HomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = state.mensagem,
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Button(
-                                onClick = { compromissoViewModel.recarregar() },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                            ) {
-                                Text("Tentar Novamente", color = Color.White)
+                            Text(text = state.mensagem, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                            Button(onClick = { compromissoViewModel.recarregar() }) {
+                                Text("Tentar Novamente")
                             }
                         }
                     }
@@ -185,11 +173,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun SummarySection(
-    totalCompromissos: Int,
-    totalClientes: Int,
-    valorTotal: Double
-) {
+fun SummarySection(totalCompromissos: Int, totalClientes: Int, valorTotal: Double) {
     val media = if (totalCompromissos > 0) valorTotal / totalCompromissos else 0.0
     Column(
         modifier = Modifier
@@ -209,12 +193,8 @@ fun SummarySection(
 }
 
 @Composable
-fun DatePickerSection(
-    selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit
-) {
+fun DatePickerSection(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit) {
     val days = (-2..12).map { LocalDate.now().plusDays(it.toLong()) }
-    
     LazyRow(
         modifier = Modifier.padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -223,27 +203,13 @@ fun DatePickerSection(
             val isSelected = date == selectedDate
             Card(
                 onClick = { onDateSelected(date) },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) PrimaryBlue else Color.White
-                ),
+                colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryBlue else Color.White),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.width(60.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")),
-                        color = if (isSelected) Color.White else TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = date.dayOfMonth.toString(),
-                        color = if (isSelected) Color.White else PrimaryBlue,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")), color = if (isSelected) Color.White else TextSecondary, fontSize = 12.sp)
+                    Text(text = date.dayOfMonth.toString(), color = if (isSelected) Color.White else PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
         }
@@ -252,60 +218,31 @@ fun DatePickerSection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppointmentsList(
-    compromissos: List<Compromisso>,
-    onDelete: (Compromisso) -> Unit
-) {
-    if (compromissos.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Nenhum compromisso para este dia", color = TextSecondary)
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(
-                items = compromissos,
-                key = { it.id }
-            ) { appointment ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { value ->
-                        if (value == SwipeToDismissBoxValue.EndToStart) {
-                            onDelete(appointment)
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                )
-
-                SwipeToDismissBox(
-                    state = dismissState,
-                    enableDismissFromStartToEnd = false,
-                    backgroundContent = {
-                        val color = when (dismissState.dismissDirection) {
-                            SwipeToDismissBoxValue.EndToStart -> Color.Red
-                            else -> Color.Transparent
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(color, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Excluir",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                ) {
-                    AppointmentItem(appointment)
+fun AppointmentsList(compromissos: List<Compromisso>, onDelete: (Compromisso) -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(items = compromissos, key = { it.id }) { appointment ->
+            val dismissState = rememberSwipeToDismissBoxState(
+                confirmValueChange = { value ->
+                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                        onDelete(appointment)
+                        true
+                    } else { false }
                 }
+            )
+            SwipeToDismissBox(
+                state = dismissState,
+                enableDismissFromStartToEnd = false,
+                backgroundContent = {
+                    val color = when (dismissState.dismissDirection) {
+                        SwipeToDismissBoxValue.EndToStart -> Color.Red
+                        else -> Color.Transparent
+                    }
+                    Box(modifier = Modifier.fillMaxSize().background(color, RoundedCornerShape(16.dp)).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterEnd) {
+                        Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = Color.White)
+                    }
+                }
+            ) {
+                AppointmentItem(appointment)
             }
         }
     }
@@ -316,36 +253,25 @@ fun AppointmentItem(appointment: Compromisso) {
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = appointment.horarioInicial.format(timeFormatter),
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryBlue
-                )
+                Text(text = appointment.horarioInicial.format(timeFormatter), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = PrimaryBlue)
+                if (appointment.temLembrete) {
+                    Icon(imageVector = Icons.Default.Notifications, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
+            Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.LightGray))
+            Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = appointment.descricao, fontWeight = FontWeight.Bold)
-                Text(
-                    text = if (appointment.temLembrete) "Com lembrete" else "Sem lembrete",
-                    color = TextSecondary,
-                    fontSize = 14.sp
-                )
+                Text(text = appointment.descricao, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(text = "Cliente ID: ${appointment.clienteId}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
-            Text(
-                text = "R$ %.2f".format(appointment.valor),
-                fontWeight = FontWeight.Bold,
-                color = PrimaryBlue
-            )
+            Text(text = "R$ %.2f".format(appointment.valor), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PrimaryBlue)
         }
     }
 }
