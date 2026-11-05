@@ -51,6 +51,7 @@ fun PlanifyButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     containerColor: Color = PrimaryBlue
 ) {
     Button(
@@ -58,13 +59,17 @@ fun PlanifyButton(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            disabledContainerColor = Color.LightGray
+        ),
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White
+            color = if (enabled) Color.White else Color.DarkGray
         )
     }
 }
@@ -75,7 +80,10 @@ fun PlanifyTextField(
     onValueChange: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    placeholder: String = ""
+    placeholder: String = "",
+    readOnly: Boolean = false,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -83,6 +91,9 @@ fun PlanifyTextField(
         label = { Text(label) },
         placeholder = { Text(placeholder) },
         modifier = modifier.fillMaxWidth(),
+        readOnly = readOnly,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = PrimaryBlue,

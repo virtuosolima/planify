@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.edu.ifpe.planify.model.Servico
+import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
 import br.edu.ifpe.planify.ui.components.PlanifyButton
 import br.edu.ifpe.planify.ui.components.PlanifyTextField
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
@@ -17,6 +19,7 @@ import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServicoFormScreen(
+    viewModel: ServicoViewModel,
     servicoId: Int? = null,
     onNavigateBack: () -> Unit,
     onSave: () -> Unit
@@ -26,6 +29,16 @@ fun ServicoFormScreen(
     var preco by remember { mutableStateOf("") }
 
     val isEditing = servicoId != null
+
+    LaunchedEffect(servicoId) {
+        if (isEditing) {
+            viewModel.getServicoById(servicoId!!)?.let { servico ->
+                nome = servico.nome
+                descricao = servico.descricao
+                preco = servico.preco.toString()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -79,7 +92,20 @@ fun ServicoFormScreen(
 
             PlanifyButton(
                 text = if (isEditing) "Salvar Alterações" else "Cadastrar Serviço",
-                onClick = onSave
+                onClick = {
+                    val servico = Servico(
+                        id = servicoId ?: 0,
+                        nome = nome,
+                        descricao = descricao,
+                        preco = preco.toDoubleOrNull() ?: 0.0
+                    )
+                    if (isEditing) {
+                        viewModel.update(servico)
+                    } else {
+                        viewModel.insert(servico)
+                    }
+                    onSave()
+                }
             )
         }
     }

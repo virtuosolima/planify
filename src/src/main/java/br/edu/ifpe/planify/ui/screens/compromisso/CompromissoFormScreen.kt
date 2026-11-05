@@ -18,18 +18,44 @@ import br.edu.ifpe.planify.ui.components.PlanifyTextField
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import br.edu.ifpe.planify.model.Cliente
+import br.edu.ifpe.planify.model.Compromisso
+import br.edu.ifpe.planify.model.PaymentStatus
+import br.edu.ifpe.planify.model.Servico
+import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
+import br.edu.ifpe.planify.ui.viewmodel.CompromissoViewModel
+import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
+import br.edu.ifpe.planify.ui.components.PlanifyButton
+import br.edu.ifpe.planify.ui.components.PlanifyTextField
+import br.edu.ifpe.planify.ui.theme.PrimaryBlue
+import br.edu.ifpe.planify.ui.theme.TextSecondary
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompromissoFormScreen(
+    compromissoViewModel: CompromissoViewModel,
+    clienteViewModel: ClienteViewModel,
+    servicoViewModel: ServicoViewModel,
     onNavigateBack: () -> Unit,
     onSave: () -> Unit
 ) {
-    var selectedCliente by remember { mutableStateOf("") }
-    var selectedServico by remember { mutableStateOf("") }
-    var data by remember { mutableStateOf("") }
-    var horario by remember { mutableStateOf("") }
+    val clientes by clienteViewModel.allClientes.collectAsState()
+    val servicos by servicoViewModel.allServicos.collectAsState()
+
+    var selectedCliente by remember { mutableStateOf<Cliente?>(null) }
+    var selectedServico by remember { mutableStateOf<Servico?>(null) }
+    var dataStr by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))) }
+    var horarioStr by remember { mutableStateOf(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))) }
     var valor by remember { mutableStateOf("") }
     var lembreteAtivo by remember { mutableStateOf(false) }
+
+    var expandedCliente by remember { mutableStateOf(false) }
+    var expandedServico by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -52,36 +78,79 @@ fun CompromissoFormScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Cliente Selection (Simulated as TextField for UI prototype)
-            PlanifyTextField(
-                value = selectedCliente,
-                onValueChange = { selectedCliente = it },
-                label = "Selecionar Cliente",
-                placeholder = "Busque um cliente..."
-            )
+            // Cliente Selection
+            ExposedDropdownMenuBox(
+                expanded = expandedCliente,
+                onExpandedChange = { expandedCliente = !expandedCliente }
+            ) {
+                PlanifyTextField(
+                    value = selectedCliente?.nome ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = "Selecionar Cliente",
+                    placeholder = "Selecione um cliente",
+                    modifier = Modifier.menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCliente,
+                    onDismissRequest = { expandedCliente = false }
+                ) {
+                    clientes.forEach { cliente ->
+                        DropdownMenuItem(
+                            text = { Text(cliente.nome) },
+                            onClick = {
+                                selectedCliente = cliente
+                                expandedCliente = false
+                            }
+                        )
+                    }
+                }
+            }
 
             // Servico Selection
-            PlanifyTextField(
-                value = selectedServico,
-                onValueChange = { selectedServico = it },
-                label = "Selecionar Serviço",
-                placeholder = "Busque um serviço..."
-            )
+            ExposedDropdownMenuBox(
+                expanded = expandedServico,
+                onExpandedChange = { expandedServico = !expandedServico }
+            ) {
+                PlanifyTextField(
+                    value = selectedServico?.nome ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = "Selecionar Serviço",
+                    placeholder = "Selecione um serviço",
+                    modifier = Modifier.menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedServico,
+                    onDismissRequest = { expandedServico = false }
+                ) {
+                    servicos.forEach { servico ->
+                        DropdownMenuItem(
+                            text = { Text(servico.nome) },
+                            onClick = {
+                                selectedServico = servico
+                                valor = servico.preco.toString()
+                                expandedServico = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PlanifyTextField(
-                    value = data,
-                    onValueChange = { data = it },
+                    value = dataStr,
+                    onValueChange = { dataStr = it },
                     label = "Data",
                     modifier = Modifier.weight(1f),
                     placeholder = "DD/MM/AAAA"
                 )
                 PlanifyTextField(
-                    value = horario,
-                    onValueChange = { horario = it },
+                    value = horarioStr,
+                    onValueChange = { horarioStr = it },
                     label = "Horário",
                     modifier = Modifier.weight(1f),
-                    placeholder = "00:00"
+                    placeholder = "HH:mm"
                 )
             }
 
@@ -102,7 +171,7 @@ fun CompromissoFormScreen(
             ) {
                 Column {
                     Text(text = "Ativar Lembrete", fontWeight = FontWeight.SemiBold)
-                    Text(text = "Notificar 1 hora antes", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(text = "Notificar antes do atendimento", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
                 Switch(
                     checked = lembreteAtivo,
@@ -115,7 +184,29 @@ fun CompromissoFormScreen(
 
             PlanifyButton(
                 text = "Confirmar Agendamento",
-                onClick = onSave
+                enabled = selectedCliente != null && selectedServico != null,
+                onClick = {
+                    try {
+                        val date = LocalDate.parse(dataStr, DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        val time = LocalTime.parse(horarioStr, DateTimeFormatter.ofPattern("HH:mm"))
+                        
+                        val compromisso = Compromisso(
+                            clienteId = selectedCliente?.id ?: 0,
+                            servicoId = selectedServico?.id ?: 0,
+                            descricao = "${selectedServico?.nome} - ${selectedCliente?.nome}",
+                            data = date,
+                            horarioInicial = time,
+                            valor = valor.toDoubleOrNull() ?: 0.0,
+                            statusPagamento = PaymentStatus.PENDENTE,
+                            temLembrete = lembreteAtivo
+                        )
+                        
+                        compromissoViewModel.insert(compromisso)
+                        onSave()
+                    } catch (e: Exception) {
+                        // Tratar erro de parsing (idealmente com feedback visual)
+                    }
+                }
             )
         }
     }

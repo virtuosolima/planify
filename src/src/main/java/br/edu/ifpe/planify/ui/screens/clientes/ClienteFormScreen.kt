@@ -10,13 +10,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.edu.ifpe.planify.model.Cliente
+import br.edu.ifpe.planify.ui.viewmodel.ClienteViewModel
 import br.edu.ifpe.planify.ui.components.PlanifyButton
 import br.edu.ifpe.planify.ui.components.PlanifyTextField
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClienteFormScreen(
+    viewModel: ClienteViewModel,
     clienteId: Int? = null,
     onNavigateBack: () -> Unit,
     onSave: () -> Unit
@@ -24,8 +28,19 @@ fun ClienteFormScreen(
     var nome by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
     var observacoes by remember { mutableStateOf("") }
-
+    
+    val scope = rememberCoroutineScope()
     val isEditing = clienteId != null
+
+    LaunchedEffect(clienteId) {
+        if (isEditing) {
+            viewModel.getClienteById(clienteId!!)?.let { cliente ->
+                nome = cliente.nome
+                telefone = cliente.telefone
+                observacoes = cliente.observacoes ?: ""
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -79,7 +94,20 @@ fun ClienteFormScreen(
 
             PlanifyButton(
                 text = if (isEditing) "Salvar Alterações" else "Cadastrar Cliente",
-                onClick = onSave
+                onClick = {
+                    val cliente = Cliente(
+                        id = clienteId ?: 0,
+                        nome = nome,
+                        telefone = telefone,
+                        observacoes = observacoes
+                    )
+                    if (isEditing) {
+                        viewModel.update(cliente)
+                    } else {
+                        viewModel.insert(cliente)
+                    }
+                    onSave()
+                }
             )
         }
     }

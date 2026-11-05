@@ -16,17 +16,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import br.edu.ifpe.planify.model.Servico
+import br.edu.ifpe.planify.ui.viewmodel.ServicoViewModel
 import br.edu.ifpe.planify.ui.theme.PrimaryBlue
 import br.edu.ifpe.planify.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServicoListScreen(
+    viewModel: ServicoViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToAddServico: () -> Unit,
     onNavigateToEditServico: (Int) -> Unit
 ) {
+    val servicos by viewModel.allServicos.collectAsState()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Serviços", color = Color.White, fontWeight = FontWeight.Bold) },
@@ -54,19 +67,67 @@ fun ServicoListScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FA))
         ) {
-            val mockServicos = listOf(
-                MockServico(1, "Corte de Cabelo", "Corte masculino e feminino", 50.0),
-                MockServico(2, "Barba", "Desenho e hidratação", 30.0),
-                MockServico(3, "Coloração", "Aplicação de tintura", 120.0)
-            )
+            if (servicos.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Nenhum serviço cadastrado", color = TextSecondary)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = servicos,
+                        key = { it.id }
+                    ) { servico ->
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    scope.launch {
+                                        viewModel.delete(servico)
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "Serviço removido",
+                                            actionLabel = "Desfazer",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.insert(servico)
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(mockServicos) { servico ->
-                    ServicoItem(servico, onClick = { onNavigateToEditServico(servico.id) })
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.EndToStart -> Color.Red
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Excluir",
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+                        ) {
+                            ServicoItem(servico, onClick = { onNavigateToEditServico(servico.id) })
+                        }
+                    }
                 }
             }
         }
@@ -75,7 +136,7 @@ fun ServicoListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServicoItem(servico: MockServico, onClick: () -> Unit) {
+fun ServicoItem(servico: Servico, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -102,10 +163,3 @@ fun ServicoItem(servico: MockServico, onClick: () -> Unit) {
         }
     }
 }
-
-data class MockServico(
-    val id: Int,
-    val nome: String,
-    val descricao: String,
-    val preco: Double
-)
