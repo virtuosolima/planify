@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">planify</string>
+    <string name="app_name">Planify</string>
 
     <!-- Perfil 4: Integrador - Strings de Estado -->
     <string name="estado_carregando">Sincronizando agenda…</string>
