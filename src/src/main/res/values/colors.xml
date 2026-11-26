@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
+    <!-- Paleta de identidade visual do Planify -->
+    <color name="planify_primary">#FF1A2184</color>
+    <color name="planify_secondary">#FFDCE0FF</color>
+    <color name="planify_tertiary">#FF353DAB</color>
+    <color name="planify_background">#FFF5F6FF</color>
+    <color name="planify_surface">#FFFFFFFF</color>
+    <color name="planify_text">#FF252747</color>
+
+    <!-- Recursos antigos preservados para compatibilidade -->
+    <color name="purple_200">#FFDCE0FF</color>
+    <color name="purple_500">#FF1A2184</color>
+    <color name="purple_700">#FF353DAB</color>
+    <color name="teal_200">#FFAAB4FF</color>
+    <color name="teal_700">#FF8795F5</color>
+    <color name="black">#FF11152E</color>
     <color name="white">#FFFFFFFF</color>
 </resources>
